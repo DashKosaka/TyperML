@@ -45,6 +45,7 @@ TEXT_FILE = 'text.txt'
 SAVE_FILE = 'stats.json'
 
 AVERAGE_LENGTH = 5.1    # Average length of a word in English Language
+COUNTDOWN = 5
 
 BAD = [b'\x00', b'\xff']    
 
@@ -69,7 +70,15 @@ def _backspace(typed):
     print('\b \b', end='', flush=True)
     return typed[:len(typed)-1]
 
+def _countdown(seconds):
+    for i in range(int(seconds)):
+        print(str(seconds-i) + '...', end='', flush=True)
+        time.sleep(1)
+    print('GO!!!')
+
 ##### Run the Trainer #####
+    
+_countdown(COUNTDOWN)
     
 # Event loop
 for idx, word in enumerate(paragraph):
@@ -104,14 +113,17 @@ for idx, word in enumerate(paragraph):
     
     if(word not in data.keys()):
         avgTime = wpm
-        mistakes = currMistakes
-        occurrences = 0
+        avgMistakes = currMistakes
+        totalOccurrences = 1
+        lifetime = wpm
     else:
-        avgTime = (data[word]['wpm'] + wpm) / 2
-        mistakes = (data[word]['mistakes'] + mistakes) / 2
-        occurrences = data[word]['occurrences'] + 1
+        avgTime = (data[word]['biased'] + wpm) / 2
+        avgMistakes = (data[word]['mistakes'] + currMistakes) / 2
+        totalOccurrences = data[word]['occurrences'] + 1
+        lifetime = ((data[word]['lifetime'] * data[word]['occurences']) + wpm) / totalOccurrences
     
-    data[word] = {'mistakes':mistakes, 'wpm':avgTime, 'occurrences':occurrences}
+    data[word] = {'mistakes':avgMistakes, 'biased':avgTime, 
+                'lifetime':wpm, 'occurrences':totalOccurrences}
 
         
 ##### Save the Stats #####
