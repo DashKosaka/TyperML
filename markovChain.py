@@ -9,21 +9,26 @@ Class of a Markov Chain used for sentence generation
 import numpy as np
 import random
 import sys
+import copy
 
 class MarkovChain:
     
-    def __init__(self, file, stats):
+    def __init__(self, file, stats, epsilon=.25):
         
-        self.words = open(file).read().split()        
+        self.words = open(file).read().split()                
         
         self.cache = {}
-        
         self._populateCache()
         
         self.paragraph = []
         
-        self.stats = stats
+        self.wordStats = stats
+        self.keys = list(self.wordStats.keys())
+        self.distribution = self._makeDistribution()
+
+        self.epsilon = epsilon
     
+        
     def _groupByThrees(self):
         
         if(len(self.words) < 3):
@@ -46,21 +51,47 @@ class MarkovChain:
             if(key in self.cache.keys()):self.cache[key].append(result)
             else:self.cache[key] = [result]
                 
+    def _makeDistribution(self):
+        
+        distribution = []
+        
+        for key in self.keys:
+            
+            stat = self.wordStats[key]
+            
+            distribution.append(stat['mistakes'] / stat['biased'])
+
+        return self._normalize(distribution)
+
+    def _normalize(self, distribution):
+        total = sum(distribution)
+        return [x / total for x in distribution]
 
     def newParagraph(self, size=100):
         
         keys = list(self.cache.keys())
         w1, w2 = random.choice(keys)
         
+        past = copy.deepcopy(self.keys)
+        distribution = copy.deepcopy(self.distribution)
+        
+        self.revisited = []
         self.paragraph = [w1, w2]
         
         while(len(self.paragraph) < size):
             key = (w1, w2)
             
             w1 = w2
-
-            try:w2 = np.random.choice(self.cache[key])
-            except:w1, w2 = random.choice(keys)
+            if(random.random() < self.epsilon and len(past) > 0):
+                w2 = np.random.choice(past, p=distribution)
+                idx = past.index(w2)
+                past.pop(idx)
+                distribution.pop(idx)
+                distribution = self._normalize(distribution)
+                self.revisited.append(w2)
+            else:
+                try:w2 = np.random.choice(self.cache[key])
+                except:w1, w2 = random.choice(keys)
 
             self.paragraph.append(w2)   
         
@@ -69,12 +100,6 @@ class MarkovChain:
     def asString(self):
         
         return ' '.join(self.paragraph)
-
-    def _epsilonGreedy(self):
-        
-        return True
-    
-
 
 
 

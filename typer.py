@@ -30,29 +30,44 @@ Problems
 
 """
 import numpy as np
-import sys
-import json
-import time
-import msvcrt
+import sys, os, json, time, msvcrt, random
 from markovChain import MarkovChain
 ##### User Set #####
 
+userName = input('What user are you: ').lower()
 
+numWords = input('How long should the passage be: ')
+try:numWords = int(numWords)
+except:numWords = random.randint(10, 25)
 
 ##### Constants #####
 
 TEXT_FILE = 'text.txt'
 SAVE_FILE = 'stats.json'
+STATS_DIR = './users/'
 
 AVERAGE_LENGTH = 5.1    # Average length of a word in English Language
 COUNTDOWN = 5
 
-BAD = [b'\x00', b'\xff']    
+BAD = [b'\x00', b'\xff', b'\xe0']    
 
 ##### Read Past Stats #####
 
-with open(SAVE_FILE) as f:
-    data = json.load(f)
+path = STATS_DIR + userName + '.json'
+
+def _makeProfile(path, name):
+    cleanData = {'name':name, 'games':0, 'wpm':{'lifetime':0, 'recent':[]}, 'words':{}}
+    
+    with open(path, 'w') as f:
+        json.dump(cleanData, f)
+
+if(not os.path.isfile(path)):_makeProfile(path, userName)
+
+with open(path) as f:
+    stats = json.load(f)
+
+data = stats['words']
+history = stats['wpm']
 
 ##### Initialize #####
 
@@ -60,9 +75,10 @@ generator = MarkovChain(TEXT_FILE, data)
 
 ##### Generate Text #####
 
-paragraph = generator.newParagraph(5)
+paragraph = generator.newParagraph(numWords)
+paragraphString = generator.asString()
 print('Sentence to be typed:\n')
-print(generator.asString())
+print(paragraphString)
 
 ##### Helpers #####
 
@@ -80,6 +96,12 @@ def _countdown(seconds):
     
 _countdown(COUNTDOWN)
     
+# Try to flush the buffer
+while msvcrt.kbhit():
+        msvcrt.getch()
+
+
+revisited = {}
 # Event loop
 for idx, word in enumerate(paragraph):
 
@@ -89,12 +111,15 @@ for idx, word in enumerate(paragraph):
     
     while(1):
         char = msvcrt.getch()
-        
+                
         if(char in BAD):continue
         elif(char == b'\x03'):sys.exit('Keyboard Interrupt!')
         elif(char == b'\x08' and len(typed) > 0):
             typed = _backspace(typed)
             continue
+
+        # Start the clock if it is the first character of the first word
+        if(idx == 0 and typed == ''):totalTime = startTime = time.time()
 
         char = char.decode('utf-8')
         
@@ -104,10 +129,12 @@ for idx, word in enumerate(paragraph):
 
         typed += char
         
+        # A mistake has been made
         if(word[:len(typed)] != typed):currMistakes += 1
+        # Typing is finished
         elif(word == typed and idx == (len(paragraph)-1)):break
     
-    if(currMistakes == 0):continue
+    if((currMistakes == 0) and (word not in generator.revisited)):continue
     
     wpm = (len(word) / AVERAGE_LENGTH) / ((time.time() - startTime) / 60)
     
@@ -120,27 +147,45 @@ for idx, word in enumerate(paragraph):
         avgTime = (data[word]['biased'] + wpm) / 2
         avgMistakes = (data[word]['mistakes'] + currMistakes) / 2
         totalOccurrences = data[word]['occurrences'] + 1
-        lifetime = ((data[word]['lifetime'] * data[word]['occurences']) + wpm) / totalOccurrences
+        lifetime = ((data[word]['lifetime'] * data[word]['occurrences']) + wpm) / totalOccurrences
+    
+    if(word in generator.revisited):
+        revisited[word] = {'deltaMistakes':(currMistakes-data[word]['mistakes']), 'deltaWPM':(wpm-data[word]['biased'])}
     
     data[word] = {'mistakes':avgMistakes, 'biased':avgTime, 
                 'lifetime':wpm, 'occurrences':totalOccurrences}
 
-        
+print('\nFinished', end='\n\n')
+
+##### Display the Result #####
+
+totalWPM = int(len(paragraphString) / AVERAGE_LENGTH) / ((time.time() - totalTime) / 60)
+print('Total WPM:', totalWPM, end='\n\n')
+
+print('Revisted Words:')
+for word in generator.revisited:
+    
+    print('"' + word + '":', revisited[word])
+
 ##### Save the Stats #####
+
+history['recent'].append(totalWPM)
+if(len(history['recent']) > 10):history['recent'].pop(0)
+print('\nRecent WPM (10 Games):', np.average(history['recent']), end='\n\n')
+
+newLifetime = (stats['games'] * history['lifetime'] + totalWPM) / (stats['games'] + 1)
+stats['games'] += 1
+history['lifetime'] = newLifetime
+print('Lifetime WPM:', newLifetime, end='\n\n')
+
 
 # What kind of information needs to be saved?
 # 1. The word where the error occurred
 # 2. The severity(?) of the mistake:
     # - Time taken (wpm)
     # - Number of keystroke deviations
-    
-with open(SAVE_FILE, 'w') as f:
-    json.dump(data, f)
-
-
-
-
-
+with open(path, 'w') as f:
+    json.dump(stats, f)
 
 
 
