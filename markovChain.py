@@ -7,15 +7,18 @@ Created on Tue Jun 12 03:12:33 2018
 Class of a Markov Chain used for sentence generation
 """
 import numpy as np
-import random
-import sys
-import copy
+import random, sys, copy, os
 
 class MarkovChain:
     
-    def __init__(self, file, stats, epsilon=.25):
-        
-        self.words = open(file).read().split()                
+    def __init__(self, directory, stats, epsilon=.25):
+
+        self.words = []        
+
+        for (path, dirName, fileList) in os.walk(directory):
+            for file in fileList:
+                fileWords = open(path + '/' + file).read().split()
+                self.words.extend(fileWords)
         
         self.cache = {}
         self._populateCache()

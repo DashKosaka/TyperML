@@ -42,7 +42,7 @@ except:numWords = random.randint(10, 25)
 
 ##### Constants #####
 
-TEXT_FILE = 'text.txt'
+TEXT_DIR = './text/'
 SAVE_FILE = 'stats.json'
 STATS_DIR = './users/'
 
@@ -71,7 +71,7 @@ history = stats['wpm']
 
 ##### Initialize #####
 
-generator = MarkovChain(TEXT_FILE, data)
+generator = MarkovChain(TEXT_DIR, data)
 
 ##### Generate Text #####
 
@@ -123,6 +123,11 @@ for idx, word in enumerate(paragraph):
 
         char = char.decode('utf-8')
         
+        # Only let 3 wrong characters be typed
+        if(len(typed) > len(word)):
+            currMistakes += 1
+            continue
+
         print(char, end='', flush=True)
     
         if(word == typed and char == ' '):break
