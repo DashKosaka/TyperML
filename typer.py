@@ -32,28 +32,13 @@ Problems
 import numpy as np
 import sys, os, json, time, msvcrt, random
 from markovChain import MarkovChain
-##### User Set #####
-
-userName = input('What user are you: ').lower()
-
-numWords = input('How long should the passage be: ')
-try:numWords = int(numWords)
-except:numWords = random.randint(10, 25)
 
 ##### Constants #####
-
-TEXT_DIR = './text/'
-SAVE_FILE = 'stats.json'
-STATS_DIR = './users/'
-
-AVERAGE_LENGTH = 5.1    # Average length of a word in English Language
-COUNTDOWN = 5
 
 BAD = [b'\x00', b'\xff', b'\xe0']    
 
 ##### Read Past Stats #####
 
-path = STATS_DIR + userName + '.json'
 
 def _makeProfile(path, name):
     cleanData = {'name':name, 'games':0, 'wpm':{'lifetime':0, 'recent':[]}, 'words':{}}
@@ -61,24 +46,15 @@ def _makeProfile(path, name):
     with open(path, 'w') as f:
         json.dump(cleanData, f)
 
-if(not os.path.isfile(path)):_makeProfile(path, userName)
-
-with open(path) as f:
-    stats = json.load(f)
-
-data = stats['words']
-history = stats['wpm']
-
-##### Initialize #####
-
-generator = MarkovChain(TEXT_DIR, data)
-
-##### Generate Text #####
-
-paragraph = generator.newParagraph(numWords)
-paragraphString = generator.asString()
-print('Sentence to be typed:\n')
-print(paragraphString)
+def getProfile(directory, userName):
+    path = directory + userName + '.json'
+    
+    if(not os.path.isfile(path)):_makeProfile(path, userName)
+    
+    with open(path) as f:
+        stats = json.load(f)
+    
+    return stats
 
 ##### Helpers #####
 
@@ -93,7 +69,7 @@ def _countdown(seconds):
     print('GO!!!')
 
 ##### Run the Trainer #####
-    
+'''    
 _countdown(COUNTDOWN)
     
 # Try to flush the buffer
@@ -102,6 +78,8 @@ while msvcrt.kbhit():
 
 
 revisited = {}
+wrongWords = {}
+
 # Event loop
 for idx, word in enumerate(paragraph):
 
@@ -123,11 +101,12 @@ for idx, word in enumerate(paragraph):
 
         char = char.decode('utf-8')
         
-        # Only let 3 wrong characters be typed
+        # Check to see if the word was typed wrong, disable typing if it is
         if(len(typed) > len(word)):
             currMistakes += 1
             continue
 
+        # Print the character to the console
         print(char, end='', flush=True)
     
         if(word == typed and char == ' '):break
@@ -156,6 +135,8 @@ for idx, word in enumerate(paragraph):
     
     if(word in generator.revisited):
         revisited[word] = {'deltaMistakes':(currMistakes-data[word]['mistakes']), 'deltaWPM':(wpm-data[word]['biased'])}
+    else:
+        wrongWords[word] = {'mistakes':currMistakes, 'wpm':wpm}
     
     data[word] = {'mistakes':avgMistakes, 'biased':avgTime, 
                 'lifetime':wpm, 'occurrences':totalOccurrences}
@@ -169,30 +150,34 @@ print('Total WPM:', totalWPM, end='\n\n')
 
 print('Revisted Words:')
 for word in generator.revisited:
-    
     print('"' + word + '":', revisited[word])
+
+print('New mistakes:')
+for word in wrongWords:
+    print('"' + word + '":', wrongWords[word])
 
 ##### Save the Stats #####
 
-history['recent'].append(totalWPM)
-if(len(history['recent']) > 10):history['recent'].pop(0)
-print('\nRecent WPM (10 Games):', np.average(history['recent']), end='\n\n')
+def saveStats(stats, history, path):
+    print('Saving stats...')
+    history['recent'].append(totalWPM)
+    if(len(history['recent']) > 10):history['recent'].pop(0)
+    print('\nRecent WPM (10 Games):', np.average(history['recent']), end='\n\n')
+    
+    newLifetime = (stats['games'] * history['lifetime'] + totalWPM) / (stats['games'] + 1)
+    stats['games'] += 1
+    history['lifetime'] = newLifetime
+    print('Lifetime WPM:', newLifetime, end='\n\n')
+    
+    # What kind of information needs to be saved?
+    # 1. The word where the error occurred
+    # 2. The severity(?) of the mistake:
+        # - Time taken (wpm)
+        # - Number of keystroke deviations
+    with open(path, 'w') as f:
+        json.dump(stats, f)
 
-newLifetime = (stats['games'] * history['lifetime'] + totalWPM) / (stats['games'] + 1)
-stats['games'] += 1
-history['lifetime'] = newLifetime
-print('Lifetime WPM:', newLifetime, end='\n\n')
-
-
-# What kind of information needs to be saved?
-# 1. The word where the error occurred
-# 2. The severity(?) of the mistake:
-    # - Time taken (wpm)
-    # - Number of keystroke deviations
-with open(path, 'w') as f:
-    json.dump(stats, f)
-
-
+'''
 
 
 
