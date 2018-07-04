@@ -41,7 +41,7 @@ BAD = [b'\x00', b'\xff', b'\xe0']
 
 
 def _makeProfile(path, name):
-    cleanData = {'name':name, 'games':0, 'wpm':{'lifetime':0, 'recent':[]}, 'words':{}}
+    cleanData = {'name':name, 'games':0, 'wpm':{'lifetime':0, 'recent':[], 'all':[]}, 'words':{}}
     
     with open(path, 'w') as f:
         json.dump(cleanData, f)
@@ -176,10 +176,13 @@ def saveStats(stats, history, path):
         # - Number of keystroke deviations
     with open(path, 'w') as f:
         json.dump(stats, f)
-
 '''
 
-
+def saveStats(stats, directory, userName):
+    path = directory + userName + '.json'
+    
+    with open(path, 'w') as f:
+        json.dump(stats, f)
 
 
 
