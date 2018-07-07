@@ -55,6 +55,8 @@ class Scenes:
         self.screen.blit(back, (0, 0))
         pygame.display.flip()
 
+        time.sleep(3)
+
     def _fill(self, color):
         back = self.background.convert()
         back.fill(color)
@@ -91,7 +93,7 @@ class Scenes:
     def input(self, prompt=''):
 
         # Text
-        promptText = self.largeFont.render(prompt, 1, (BLACK))
+        promptText = self.largeFont.render(prompt, 1, BLACK)
 
         # Position
         promptRect = promptText.get_rect()
@@ -124,20 +126,41 @@ class Scenes:
                         done = True
                         break
 
+                    elif(evt.key == K_BACKSPACE):
+
+                        ret = ret[:len(ret)-1]
+                        
                     elif(evt.unicode.isprintable()):
 
                         ret += evt.unicode
     
-                        inputText = self.largeFont.render(ret, 1, (BLACK))
-                        inputRect = inputText.get_rect()
-                        inputRect.midleft = promptRect.midright
+                    inputText = self.largeFont.render(ret, 1, (BLACK))
+                    inputRect = inputText.get_rect()
+                    inputRect.midleft = promptRect.midright
 
-                        self.screen.blit(inputText, inputRect)
-                        pygame.display.flip()
+                    self.screen.blit(inputText, inputRect)
+                    pygame.display.flip()
 
         return ret
 
-    def stats(self):
+    def message(self, msg):
+
+        # Text
+        msgText = self.largeFont.render(msg, 1, BLACK)
+
+        # Position
+        msgRect = msgText.get_rect()
+        msgRect.centery = self.centery
+
+        # Background
+        back = self.background.convert()
+        back.fill(WHITE)
+        back.blit(msgText, msgRect)
+
+        self.screen.blit(back, (0, 0))
+        pygame.display.flip()
+
+        time.sleep(3)
 
         return
 

@@ -110,11 +110,7 @@ def regular():
                         userTextBox = ty.render_textrect(userString, font, userRect, BLACK, LIGHT_BLUE)
                         screen.blit(userTextBox, userRect)
                         pygame.display.flip()
-                    
-#                        elif(evt.key == K_SPACE):
-#                            printFlag = True
-#                            char = ' '
-#                        
+                   
                     elif(evt.unicode.isprintable()):
                         # Check for mistake
                         if(len(userWord) > len(word)):
@@ -172,11 +168,14 @@ def regular():
         data[word] = {'mistakes':avgMistakes, 'biased':avgTime, 
                     'lifetime':wpm, 'occurrences':totalOccurrences}
 
+    totalWPM = (len(paragraphString) / AVERAGE_LENGTH) / ((time.time() - totalTime) / 60)
         
     # Save the data to user
     ty.saveStats(stats, STATS_DIR, userName)     
 
     sc.finished()               
+    
+    sc.message('WPM: ' + str(totalWPM))
         
 if __name__ == '__main__':
 
